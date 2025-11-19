@@ -1,0 +1,60 @@
+Question,Answer
+"In the context of operating systems, what is 'persistence'?",It is the principle of managing long-term storage so that data survives when power is turned off.
+What are the three main challenges associated with managing persistent storage?,"Slow devices, reliability, and providing a suitable abstraction."
+What is the canonical protocol for an OS to interact with a hardware device's registers?,"The OS polls a STATUS register until the device is not busy, writes to DATA and COMMAND registers, and then polls the STATUS register again until the request is done."
+"Instead of wasting CPU cycles by actively polling a device's status, an OS can use _____ to be notified when an operation is complete.",interrupts
+What is Direct Memory Access (DMA)?,"A feature that allows a specialized DMA engine to copy data between memory and a device in parallel with the CPU, raising an interrupt upon completion."
+What is the primary role of a device driver in an operating system?,"It provides an abstract interface to a specific hardware device, hiding the details of its registers and interaction protocol from the rest of the OS."
+What is a major performance bottleneck for Hard Disk Drives (HDDs) that is absent in Solid-State Drives (SSDs)?,"Mechanical action, including the time it takes for the head to seek the correct track and for the platter to rotate to the desired sector."
+What is 'rotational delay' in the context of an HDD?,The time spent waiting for the spinning platter to bring the desired sector under the read/write head.
+What is 'seek time' in the context of an HDD?,The time it takes to mechanically move the read/write head to the correct track on the platter.
+A key disadvantage of SSDs is that each block has a finite number of _____ cycles before it wears out.,erase
+"In an SSD, data is organized into bits, which are grouped into 4KB _____, which are grouped into 256KB _____, which are grouped into banks.",pages; blocks
+What are the two fundamental operations required to write to a previously used location on an SSD?,"First, the entire block must be erased (setting bits to 1), and then the specific page can be programmed (setting desired bits to 0)."
+What is 'wear leveling' in an SSD?,A technique to spread write and erase operations evenly across all blocks to maximize the drive's lifespan.
+"In a UNIX-like file system, what is an 'inode number'?","A low-level identifier that uniquely points to a file's metadata and data block locations, managed by the OS."
+How does a directory function in a file system?,"It is a special file that stores a list of pairs, mapping user-readable names to inode numbers."
+What does the `open()` system call return upon successfully creating or opening a file?,"A file descriptor, which is a small integer representing an index into the process's table of open files."
+"By default, what do file descriptors 0, 1, and 2 represent in a process?","Standard input (stdin), standard output (stdout), and standard error (stderr), respectively."
+Which system call allows for non-sequential reading and writing by explicitly changing the current offset within an open file?,The `lseek()` syscall.
+"To ensure data is written to disk as soon as possible instead of being held in a buffer, which system call should be used?",The `fsync()` syscall.
+How can the `rename()` syscall be used to safely edit files?,"By writing the new version to a temporary file, calling `fsync()`, and then atomically renaming the temporary file to the original filename."
+What is an inode?,"A data structure stored by the OS that contains metadata about a file, such as its size, owner, permissions, and pointers to its data blocks."
+What does the `unlink()` system call do?,It removes a directory entry (a name-to-inode link) and decrements the inode's link count.
+What is a 'hard link'?,"A second directory entry that points to the same inode as an existing file, effectively creating another name for the same file data."
+When is the data associated with an inode actually removed from the disk?,"When its link count, tracked in the inode, reaches zero after all hard links to it have been unlinked."
+What is a 'soft link' or 'symbolic link'?,A special type of file that contains the pathname of another file or directory.
+What does the `mkfs` command do?,"It creates a new, empty file system of a specific type on a given storage device."
+What does it mean to 'mount' a file system?,It means to attach the directory tree of a file system on a device to a specific directory (mount point) within the main OS directory tree.
+"In the 'very simple file system' (VSFS) model, the disk is split into four main regions. What are they?","The superblock, allocation structures (bitmaps), the inode table, and the data region."
+What is the purpose of the superblock in a file system like VSFS?,"It contains high-level information about the file system, such as its type, size, and the locations of its other key regions."
+"In VSFS, what do the 'inode bitmap' and 'data bitmap' track?",They track which inodes and which data blocks are currently allocated (in use) or free.
+How does VSFS find a specific inode's data given its inode number?,"It calculates the block address of the inode within the inode table using the inode number, reads that inode, and then follows the data block pointers within it."
+How is a directory stored in the VSFS model?,"It is stored like a regular file, with its own inode and data blocks, where the data blocks contain a list of (filename, inode number) pairs."
+Describe the process of reading the file `/foo/bar` in a simple file system.,"Read the root inode, read its data to find `foo`'s inode number, read `foo`'s inode, read its data to find `bar`'s inode number, read `bar`'s inode, then read `bar`'s data blocks."
+What is the purpose of the file system cache in memory?,To store recently or frequently accessed disk blocks in memory to avoid slow disk reads in the future.
+Why can file system writes be buffered in memory while reads are cached?,"Writes are buffered to accumulate multiple changes and write them to the non-persistent disk in efficient batches, whereas caching avoids re-reading from the slow disk."
+What problem in simple file systems like VSFS arises from placing an inode and its data blocks far apart on the disk?,"Poor locality, which increases seek times on HDDs and degrades read performance."
+What is 'fragmentation' in a file system?,"A condition where the data blocks of a single file are scattered non-consecutively across the disk, slowing down sequential reads."
+The Fast File System (FFS) introduced the concept of _____ to improve locality by grouping related inodes and data blocks together.,block groups (or cylinder groups)
+What is the basic structure of a block group in FFS?,"Each block group contains its own copy of the superblock, allocation bitmaps, inodes, and data blocks."
+What is a general FFS policy for allocating blocks for a new directory and its files?,It attempts to place the directory and the files within it in the same block group.
+What is the fundamental problem of 'crash consistency' in file systems?,"A single logical update (like appending to a file) requires multiple physical writes to disk, and a power failure can leave the file system in an inconsistent state."
+"If a crash occurs after a file's inode is updated to point to a new data block, but before the data bitmap is updated, what is the resulting inconsistency?","The inode and the data bitmap disagree; the inode claims the block is in use, while the bitmap claims it is free."
+"If a crash occurs after the data bitmap is updated to mark a block as allocated, but before any inode is updated to point to it, what is the resulting inconsistency?","A space leak, where a data block is marked as used but is not reachable by any file."
+What is the purpose of the `fsck` (file system check) utility?,To scan a file system after a crash (before mounting) to detect and repair structural inconsistencies.
+"During a file system check, if `fsck` finds an inconsistency between the inode pointers and the data bitmap, which structure does it typically trust?",It trusts the information in the inodes and rebuilds the data bitmap to match.
+"If `fsck` discovers an inode that is allocated but is not referenced in any directory, what does it do?",It moves the file to a special `lost+found` directory so the user can inspect it.
+What is the main disadvantage of relying on `fsck` for crash recovery?,It is extremely slow because it must scan the entire file system structure.
+The technique of _____ involves writing a note about upcoming changes to a dedicated area of the disk before making the changes themselves.,journaling (or write-ahead logging)
+What is the difference between data journaling and metadata journaling?,"Data journaling writes both metadata and user data to the journal, while metadata journaling only writes metadata to the journal, writing user data directly to its final location."
+"In a journaling system, a set of related writes is grouped into a single unit called a _____.",transaction
+What are the three main components written to the journal for a single transaction in data journaling?,"A transaction begin (TxB) block, copies of all blocks to be written, and a transaction end (TxE) block."
+What is the 'checkpoint' phase in a journaling file system?,The process of writing the updates from a completed journal transaction to their final locations in the main file system.
+"What is the final, three-step protocol for performing a journaled write to ensure atomicity even with crashes?","1. Journal write (TxB + blocks), 2. Journal commit (TxE), 3. Checkpoint (write to final locations)."
+How does a journaling file system manage its journal space to avoid running out of room?,"It uses a circular log, keeping track of the oldest and newest transactions and freeing space once a transaction has been successfully checkpointed."
+What is the primary performance advantage of metadata journaling over data journaling?,"It avoids the 'double write' penalty for user data, which typically constitutes the majority of all writes, thus reducing overhead."
+Describe the five-step protocol for a write operation in a metadata journaling system.,"1. Write data to final location, 2. Write journal metadata (TxB + metadata), 3. Write journal commit (TxE), 4. Checkpoint metadata, 5. Free transaction in journal."
+What is the 'block reuse' problem in metadata journaling?,"If a data block is freed and quickly reused for a new file before the old transaction is checkpointed, a crash and replay could restore outdated metadata pointing to the block, causing the new data to be associated with the old file."
+"Name an alternative crash consistency approach where writes are carefully ordered to ensure the file system is never inconsistent (or at worst, only has space leaks).",Soft updates.
+"Name an alternative crash consistency approach where there are no in-place updates, and modified blocks are always written to a new location.",Copy-on-write (CoW).

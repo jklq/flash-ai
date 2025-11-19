@@ -1,0 +1,60 @@
+Question,Answer
+What is the primary benefit of parallel computation in a program?,It can make the program run faster by splitting the computation into smaller pieces that run simultaneously on multiple CPU cores.
+How can concurrency be beneficial even on a single CPU core?,"A program can make progress on other tasks while one part is waiting for a slow I/O operation to complete, improving overall responsiveness."
+What is a major drawback of using child processes for parallelization?,Interaction between processes is very slow as it typically requires using files or other slow inter-process communication mechanisms.
+What is a 'thread' in the context of a process?,A thread is a single point of execution within a process that has its own instruction counter and registers but shares memory with other threads in the same process.
+Why is a context switch between threads of the same process generally faster than between different processes?,The OS does not need to flush the Translation Lookaside Buffer (TLB) because the threads share the same memory address space.
+Which C function from the `pthread` library is used to start a new thread?,The `pthread_create()` function is used to start a new thread with a given entry point.
+What is the purpose of the `pthread_join()` function?,It causes the calling thread to wait for a specified thread to terminate.
+"How can you pass multiple arguments to a thread function in C, which only accepts a `void*` argument?",By arranging the arguments into a `struct` and passing a pointer to that `struct` as the `void*` argument.
+Why is it unsafe for a thread function to return a pointer to a variable that was allocated on its stack?,"The thread's stack is deallocated when the thread exits, so the returned pointer becomes invalid and points to garbage data (a 'dangling pointer')."
+"While threads within a process share most memory, what memory region is private to each thread?","Each thread gets its own stack, which is why local variables are private to that thread."
+"An operation like `counter = counter + 1` is not _____, meaning it can be interrupted by a context switch.",atomic
+What are the three machine instructions that typically compose the operation `counter = counter + 1`?,"1. A `mov` to load the value from memory into a register, 2. an `add` to increment the register, and 3. another `mov` to store the new value back to memory."
+What is a 'critical section' in a concurrent program?,It is a piece of code that accesses a shared resource and must not be concurrently executed by more than one thread.
+A _____ occurs when the result of a program depends on the unpredictable timing of multiple threads entering a critical section simultaneously.,race condition
+What principle must be enforced to prevent race conditions in critical sections?,"Mutual exclusion, which ensures that if one thread is executing in a critical section, no other threads can be executing in that same section."
+What is the collective term for mechanisms like locks and semaphores designed to control access to shared resources?,Synchronization primitives.
+What are the two primary functions that define a lock's interface?,"A `lock()` function to acquire the lock before a critical section, and an `unlock()` function to release it after."
+"In the POSIX threads library, what data type is used for a lock (mutex)?",The `pthread_mutex_t` data type is used for a mutex.
+What is the trade-off associated with having a large locking scope (coarse-grained locking)?,"It provides strong protection but reduces parallelism, as more threads may have to wait even if they don't conflict."
+What is the trade-off associated with having a small locking scope (fine-grained locking)?,"It increases parallelism and reduces wait times, but it can lead to higher overhead from frequent lock/unlock operations and is more complex to implement correctly."
+What are the three main criteria for evaluating the quality of a lock's implementation?,"1. Mutual Exclusion (correctness), 2. Fairness (does every thread get a chance?), and 3. Performance (overhead)."
+What is the fundamental flaw in a naive spin lock implementation that checks a flag and then sets it in two separate steps?,"A context switch can occur between the 'test' and 'set' operations, allowing multiple threads to believe they have acquired the lock simultaneously."
+The _____ hardware instruction atomically fetches the old value at a memory location and stores a new value in its place.,test-and-set
+How does a spin lock implemented with `test_and_set` work?,"A thread repeatedly calls `test_and_set` in a loop, trying to set the flag from 0 to 1; it proceeds only when the returned old value was 0."
+How does the `compare_and_swap` instruction differ from `test_and_set`?,"It only updates the memory location with the new value if the current value matches an expected value, making it more powerful."
+What is a major fairness issue with simple spin locks?,They do not guarantee fairness; a thread could be unlucky and spin indefinitely while other threads repeatedly acquire and release the lock (starvation).
+What is the primary performance cost of a 'spin lock' on a single-core CPU?,"The spinning thread wastes its entire CPU time slice doing nothing useful, preventing the thread that holds the lock from running and releasing it."
+"How does a ticket lock, implemented with `fetch_and_add`, solve the fairness problem of spin locks?","Each thread gets a unique ticket number, and threads acquire the lock in the order of their tickets, guaranteeing that no thread starves."
+"Instead of actively spinning and consuming CPU, what does a more advanced queue-based lock do with waiting threads?","It adds the waiting threads to a queue and puts them to sleep, yielding the CPU until the lock is available."
+"In a queue-based lock, when a thread calls `unlock()`, what does it do if the wait queue is not empty?","It wakes up the next thread in the queue, effectively passing the lock directly to it."
+Why are locks alone insufficient for scenarios where a thread needs to wait for a specific condition to become true?,"Locks are for protecting short critical sections, not for long waits; a thread holding a lock while waiting would prevent any other thread from changing the condition."
+"What is the main inefficiency of waiting for a condition by 'spinning' (e.g., `while (done == 0);`)?",It wastes CPU cycles by keeping the processor busy in a tight loop instead of allowing other threads to run.
+What two operations are provided by a condition variable?,"A `wait` operation to sleep until a condition is met, and a `signal` (or `broadcast`) operation to wake up waiting threads."
+"What does the `pthread_cond_wait(&c, &m)` function atomically do?","It releases the mutex `m`, puts the calling thread to sleep on the condition variable `c`, and reacquires the mutex `m` upon waking up."
+"In a condition variable pattern, why must the condition (e.g., `done == 0`) be checked inside a `while` loop instead of an `if` statement?",To handle 'spurious wakeups' or cases where another thread runs first after being signaled and changes the condition back before the woken thread can proceed.
+Why is it critical to hold a mutex when calling `pthread_cond_signal()`?,"To prevent a race condition where a thread might check the condition, be interrupted before it can `wait`, and miss the `signal` that occurs in between."
+What is the 'producer-consumer' problem?,"It's a classic concurrency problem where 'producer' threads create data and place it into a shared buffer, while 'consumer' threads remove and process data from that buffer."
+"In the producer-consumer problem, under what condition does a producer need to wait?",A producer must wait if the shared buffer is full.
+"In the producer-consumer problem, under what condition does a consumer need to wait?",A consumer must wait if the shared buffer is empty.
+"In a multi-producer, multi-consumer scenario, why is using a single condition variable problematic?","A `signal` could wake the wrong type of thread (e.g., a consumer wakes another consumer when the buffer is empty), leading to missed signals and potential deadlock."
+What is the standard solution to the signaling problem in a multi-producer/consumer setup?,"Use two separate condition variables: one for 'buffer is not full' (e.g., `empty`) and one for 'buffer is not empty' (e.g., `full`)."
+What is the difference between `pthread_cond_signal` and `pthread_cond_broadcast`?,"`signal` wakes up at least one of the threads waiting on the condition, while `broadcast` wakes up all threads waiting on the condition."
+What two operations can be performed on a semaphore?,"`sem_wait()` (or `P`) which decrements its value, and `sem_post()` (or `V`) which increments its value."
+What happens if a thread calls `sem_wait()` on a semaphore whose value is zero?,"The semaphore's value is decremented to -1, and the thread is blocked until another thread calls `sem_post()`."
+"To use a semaphore as a mutex (a binary semaphore), what initial value should it be given with `sem_init()`?",It should be initialized with a value of 1.
+"To use a semaphore for ordering, where a parent thread waits for a child to complete a task, what should its initial value be?","It should be initialized with a value of 0, causing the parent to block on `sem_wait()` until the child calls `sem_post()`."
+"In the semaphore-based producer-consumer solution, what do the `empty` and `full` semaphores represent?","The `empty` semaphore counts the number of available slots in the buffer, while the `full` semaphore counts the number of items in the buffer."
+"In the producer-consumer solution, what is the initial value of the `empty` semaphore?","It is initialized to `MAX`, the total capacity of the buffer."
+"In the producer-consumer solution, what is the initial value of the `full` semaphore?","It is initialized to 0, since the buffer is initially empty."
+What problem occurs if multiple producers can execute `put(i)` concurrently in the semaphore-based solution?,A race condition occurs where producers might overwrite each other's data in the buffer before updating the shared pointers or counters.
+"In the correct semaphore solution for the producer-consumer problem, why must `sem_wait(&mutex)` be called *after* `sem_wait(&empty)` or `sem_wait(&full)`?","To prevent deadlock. If a thread acquired the mutex first and then blocked waiting for the buffer, no other thread could access the buffer to change its state and wake the waiting thread."
+What is the 'reader-writer lock' problem?,"A synchronization problem where a shared data structure can be read by multiple threads simultaneously, but a writer thread must have exclusive access."
+"In a reader-writer lock, when is a writer thread allowed to acquire the lock?",A writer can only acquire the lock when there are no other readers or writers currently holding the lock.
+What is the 'Dining Philosophers' problem an analogy for?,"It illustrates the problem of deadlock, where a set of processes are all blocked waiting for a resource held by another process in the set."
+How can the deadlock in the Dining Philosophers problem be resolved?,"By breaking the circular wait condition, for example, by having one philosopher pick up their forks in the opposite order to everyone else."
+How can a semaphore be used for 'throttling'?,"By initializing a semaphore to N, you can ensure that at most N threads can pass the `sem_wait()` call and enter a specific section of code at one time."
+A semaphore can be implemented using a mutex and a _____.,condition variable
+"In a semaphore implementation, what is the role of the internal mutex/lock?",It protects the semaphore's internal state (its integer value and wait queue) from race conditions when threads call `wait` or `post`.
+"In a semaphore implementation, why must the check `while (value <= 0)` be used in the `wait()` function?",To correctly handle spurious wakeups and ensure the thread only proceeds when the semaphore's value is actually positive.

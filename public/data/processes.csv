@@ -1,0 +1,67 @@
+Question,Answer
+"According to the Von Neumann Model, where do both data and program instructions reside?",They both lie in the same memory.
+What is the special hardware memory unit within a CPU that can be controlled directly?,A register.
+Which type of bus is used to transfer a value into or from a register?,The data bus.
+Which type of bus sets a register to either read or write mode?,The control bus.
+"In the context of CPU memory, what does MAR stand for?",Memory Address Register.
+"In the context of CPU memory, what does MDR stand for?",Memory Data Register.
+What is the first step for writing a value to a specific memory address?,Set the Memory Address Register (MAR) to the target address.
+What is the first step for reading a value from a specific memory address?,Set the Memory Address Register (MAR) to the target address.
+"After setting the MAR to an address and the control signal to 'read', where is the value from memory found?",The Memory Data Register (MDR) will contain the value.
+"The three stages of the CPU cycle are Fetch, Decode, and _____.",Execute.
+Which CPU register holds the address of the next instruction to be fetched?,The Instruction Counter (IC).
+"During the CPU cycle, after the IC is incremented, the contents of the MDR are copied to which register?",The Instruction Register (IR).
+What component of the CPU is responsible for computing basic arithmetic operations like addition and subtraction?,The Arithmetic Logic Unit (ALU).
+What is the function of the `MOV` instruction in x86 assembly?,It copies a value from a source to a destination.
+What is a major limitation of the `MOV` and `ADD` instructions regarding memory?,They cannot use two memory locations in the same instruction.
+"Which x86 assembly instruction subtracts a source from a destination but only stores the result in the flags register, without changing the destination's contents?",The `CMP` (compare) instruction.
+The `JE` (Jump if Equal) instruction sets the Instruction Counter to a new location if which specific flag is set to 1?,The Zero Flag (ZF).
+What is the human-readable version of machine instructions that uses mnemonics instead of codes?,Assembly language.
+What command converts an assembly source file (`program.s`) into an object file (`program.o`)?,`as -o program.o program.s`
+What command links an object file (`program.o`) to create a final program binary?,`ld -o program program.o`
+"What is the standard binary file format used on Unix-like systems that includes metadata, memory information, and sections?",Executable and Linkable Format (ELF).
+Which command-line utility can parse the structure of an ELF file and show a disassembly of its code sections?,`objdump`
+What is the role of the linker in the compilation process?,It adjusts addresses and connects object files to create a standalone executable.
+"When linking multiple object files, what does the linker do to function calls like `call _add`?","It puts the correct, final memory address for the function into the call instruction."
+Why must a program make a system call to perform actions like I/O or setting an exit code?,Because user-level programs run in a 'sandbox' and cannot directly perform these privileged actions.
+"In x86-64 Linux, which register is typically used to specify the system call number?",The `%rax` register.
+What is the system call number for the `exit` command in x86-64 Linux?,60.
+"For the `exit` system call, which register is expected by the OS to hold the exit code?",The `%rdi` register.
+What is the system call number for the `write` command in x86-64 Linux?,1.
+"A _____ is a sequence of instructions, while a _____ is a running program.",program; process
+What is the purpose of having two CPU modes: kernel mode and user mode?,To protect the OS and other processes by restricting the instructions a user process can execute.
+"In which CPU mode will the CPU run any instruction, reserved only for the OS?",Kernel mode.
+"When a process makes a system call, the CPU transitions from _____ mode to _____ mode.",user; kernel
+What is the OS technique of rapidly switching between running processes to give the illusion of simultaneous execution?,Time sharing.
+The OS mechanism for saving the state of one process and loading the state of another is called a _____.,context switch.
+"In non-cooperative multitasking, what hardware feature allows the CPU to periodically stop a process and give control back to the OS?",An interrupt timer.
+What information must the OS save during a context switch to be able to seamlessly restore a process later?,"The contents of the CPU registers (like IC, ALU flags, general-purpose registers)."
+"In Linux, what does the process state 'R' signify?",Running or runnable (waiting for the CPU).
+"In Linux, what does the process state 'S' signify?",Interruptible sleep (waiting for an event to complete).
+What is the function of the `kill` command in Linux?,It sends a signal to a process with a known process ID (PID).
+"Which signal asks a process to terminate nicely, allowing it to perform cleanup?",SIGTERM.
+Which signal terminates a process forcefully and cannot be handled or ignored by the process?,SIGKILL.
+The keyboard shortcut Ctrl+C typically sends which signal to the foreground process?,SIGINT (interrupt).
+"The keyboard shortcut Ctrl+Z typically sends which signal, causing the process to stop until resumed?",SIGSTOP.
+Which system call creates a new process by making an exact copy of the calling process?,`fork()`
+"After a `fork()` call, what return value does the parent process receive?",The process ID (PID) of the newly created child process.
+"After a `fork()` call, what return value does the child process receive?",0.
+Which system call replaces the program in the current process with a new one?,`exec()`
+Which system call is used by a parent process to wait for a child process to finish its execution?,`wait()`
+What is a common metric for scheduling performance that measures the time from a job's arrival to its completion?,Turnaround time.
+What is a scheduling metric that measures the time from a job's arrival until it first starts running?,Response time.
+Which simple scheduling algorithm runs jobs in the order they arrive and is optimal for average turnaround when all jobs have the same length?,"First In, First Out (FIFO)."
+"Which scheduling algorithm is optimal for average turnaround time when all jobs arrive simultaneously, by always running the shortest available job?",Shortest Job First (SJF).
+"Which preemptive scheduling algorithm improves upon SJF by running the job with the least amount of time left to completion, even if a new, shorter job arrives?",Shortest Time to Completion First (STCF).
+Which scheduling algorithm is designed for good response time by running each job for a short timeslice before moving to the next job in a queue?,Round Robin (RR).
+What is a major drawback of the Round Robin scheduling algorithm in terms of performance?,It generally has a poor average turnaround time.
+How can a scheduler improve system utilization when a process is waiting for I/O?,It can run another process on the CPU while the first one waits.
+The Multi-Level Feedback Queue (MLFQ) scheduler uses several _____ to model different priorities.,queues
+"In MLFQ, where is a new process placed when it first arrives?",In the topmost (highest priority) queue.
+"In MLFQ, what happens to a process if it uses up its entire time allotment in a queue?",It is moved down to a lower-priority queue.
+What mechanism in MLFQ prevents starvation of low-priority jobs?,"A periodic priority boost, which moves all jobs to the topmost queue."
+What is the main goal of the Linux Completely Fair Scheduler (CFS)?,To fairly divide CPU time among competing processes.
+CFS gives the CPU to the process with the least amount of what tracked value?,Virtual runtime (`vruntime`).
+"In CFS, what happens to the `vruntime` of a low-priority process compared to a high-priority one?",Its `vruntime` accumulates faster.
+"In Linux, what does a higher `nice` value for a process signify?",It has a lower priority and will receive a smaller share of the CPU.
+The CFS scheduler uses what type of data structure to efficiently find the process with the lowest `vruntime`?,A red-black tree.
