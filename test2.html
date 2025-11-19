@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Algorithms Cheat Sheet - Compact A4</title>
+    <style>
+        @page { size: A4; margin: 0.25cm; }
+        body { font-family: 'Courier New', monospace; font-size: 7px; line-height: 1.0; margin: 0; padding: 0.1cm; width: 100%; max-width: 20.5cm; height: 100%; box-sizing: border-box; }
+        h2 { font-size: 8px; margin: 1px 0; border-bottom: 1px solid #000; padding-bottom: 1px; }
+        h3 { font-size: 7px; margin: 0.5px 0; }
+        ul, ol { margin: 0.5px 0; padding-left: 8px; }
+        li { margin: 0.2px 0; }
+        p { margin: 0.5px 0; }
+        code { font-size: 6px; background: #f5f5f5; padding: 0 1px; }
+        table { border-collapse: collapse; width: 100%; font-size: 6px; margin: 0.5px 0; }
+        th, td { border: 1px solid #000; padding: 0.5px 1px; text-align: left; vertical-align: top; }
+        .col { float: left; width: 32%; margin-right: 1.5%; vertical-align: top; }
+        .col-wide { width: 65%; }
+        .clear { clear: both; margin-bottom: 2px; }
+        .dense { line-height: 0.9; }
+        .full-height { height: 27cm; display: flex; flex-direction: column; }
+    </style>
+</head>
+<body class="dense">
+    <div class="full-height">
+        <div class="col">
+            <h2>Binary Search</h2>
+            <p><strong>Pre:</strong> Sorted arr <code>A[0..n-1]</code>, find x.</p>
+            <ul>
+                <li>low=0, high=n-1</li>
+                <li>while low≤high:</li>
+                <li><code>mid=(low+high)//2</code></li>
+                <li>if <code>A[mid]==x</code>: ret mid</li>
+                <li>elif <code>A[mid]<x</code>: low=mid+1</li>
+                <li>else: high=mid-1</li>
+                <li>ret -1</li>
+            </ul>
+            <p><strong>Time:</strong> $O(\log n)$, <strong>Space:</strong> $O(1)$</p>
+            <p><strong>Var:</strong> Lower/upper bound, rotations.</p>
+            <p><strong>Edge:</strong> Empty arr, even/odd len.</p>
+
+            <h2>DFS</h2>
+            <p><strong>For:</strong> Graphs (dir/undir). Traverse deep first.</p>
+            <ul>
+                <li>Recur: <code>def dfs(u):</code></li>
+                <li>visited[u]=True</li>
+                <li>proc u</li>
+                <li>for v in adj[u]: if !visited[v]: dfs(v)</li>
+                <li>Iter: stack, push s, while !empty: pop u, if !vis: vis, push neigh</li>
+            </ul>
+            <p><strong>Time/Space:</strong> $O(V+E)$</p>
+            <p><strong>Uses:</strong> Cycles (back edge), topo sort (DAG), paths (track parent), components.</p>
+            <p><strong>Notes:</strong> Recur stack lim; detect cycle if recur stack has neigh.</p>
+
+            <h2>BFS</h2>
+            <p><strong>For:</strong> Graphs. Level-order, shortest unweighted path.</p>
+            <ul>
+                <li>Q=enqueue(s); vis[s]=True</li>
+                <li>while !Q.empty():</li>
+                <li>u=dequeue(); proc u</li>
+                <li>for v in adj[u]: if !vis[v]: vis[v]=True, parent[v]=u, enqueue(v)</li>
+            </ul>
+            <p><strong>Time/Space:</strong> $O(V+E)$</p>
+            <p><strong>Uses:</strong> Shortest path (dist=level), conn comp, bipartite (2-color).</p>
+            <p><strong>Notes:</strong> Queue for levels; 0-1 BFS for small weights.</p>
+        </div>
+        <div class="col">
+            <h2>Dijkstra</h2>
+            <p><strong>For:</strong> Shortest from s, non-neg wt graph. dist[] to all.</p>
+            <ul>
+                <li>dist[s]=0, others=∞; PQ min-heap (dist, node)</li>
+                <li>insert (s,0)</li>
+                <li>while !empty:</li>
+                <li>u=extract-min()</li>
+                <li>if dist[u] > cur dist: skip (lazy)</li>
+                <li>for (v,w) in adj[u]:</li>
+                <li>if dist[v] > dist[u]+w: dist[v]=dist[u]+w, insert/update PQ</li>
+            </ul>
+            <p><strong>Time:</strong> $O((V+E)\log V)$ (bin heap), <strong>Space:</strong> $O(V)$</p>
+            <p><strong>Notes:</strong> No neg; path via parent[]/prev; fib heap $O(E+V\log V)$.</p>
+            <p><strong>Edge:</strong> Disconn (∞), self-loops 0.</p>
+
+            <h2>A*</h2>
+            <p><strong>For:</strong> Heuristic path to goal (grids/maps). Informed Dijkstra.</p>
+            <ul>
+                <li>g(n)=cost from start; h(n)=est to goal (admissible: ≤ true)</li>
+                <li>f(n)=g(n)+h(n); PQ min f</li>
+                <li>Like Dijk but prio=f; relax: if g(v)>g(u)+w: g(v)=..., f(v)=...</li>
+                <li>Closed set for visited; reopen if better</li>
+            </ul>
+            <p><strong>Time:</strong> Varies; opt if consistent h ($h(u)≤w(u,v)+h(v)$)</p>
+            <p><strong>Notes:</strong> h=0→Dijk; Manhattan $|dx|+|dy|$, Eucl $\sqrt{dx^2+dy^2}$; no path→∞.</p>
+            <p><strong>Edge:</strong> Heuristic overest→subopt; ties break by h or cross.</p>
+
+            <h2>MST - Prim</h2>
+            <p><strong>For:</strong> Undir conn graph w/wt. Min tree span all V.</p>
+            <ul>
+                <li>key[v]=∞, parent[v]=-1, inMST[v]=False; key[s]=0</li>
+                <li>for i=1 to V:</li>
+                <li>u=extract min key !inMST (PQ)</li>
+                <li>inMST[u]=True</li>
+                <li>for (v,w) adj u:</li>
+                <li>if !inMST[v] & w < key[v]: key[v]=w, parent[v]=u, update PQ</li>
+            </ul>
+            <p><strong>Time:</strong> $O((V+E)\log V)$</p>
+            <p><strong>Notes:</strong> Dense: O(V^2) simple impl.</p>
+        </div>
+        <div class="col col-wide">
+            <h2>MST - Kruskal</h2>
+            <p><strong>For:</strong> Same as Prim. Sort edges first.</p>
+            <ul>
+                <li>Sort E asc by wt</li>
+                <li>UF/DSU: parent[i]=i, rank[i]=0</li>
+                <li>find(x): path comp to root</li>
+                <li>union(x,y): link by rank</li>
+                <li>MST=[], for edge (u,v,w) sorted:</li>
+                <li>if find(u)!=find(v): union(u,v); add to MST</li>
+            </ul>
+            <p><strong>Time:</strong> $O(E\log E + E\alpha(V))$ (α near-const)</p>
+            <p><strong>Notes:</strong> Disconn→forest; cycle if union same; E<V-1→not conn.</p>
+            <p><strong>UF Code:</strong></p>
+            <table>
+                <tr><th>Func</th><th>Code</th></tr>
+                <tr><td>find</td><td><code>def find(x): if parent[x]!=x: parent[x]=find(parent[x]); return parent[x]</code></td></tr>
+                <tr><td>union</td><td><code>def union(x,y): px=find(x); py=find(y); if rank[px]<rank[py]: parent[px]=py; elif rank[px]>rank[py]: parent[py]=px; else: parent[py]=px; rank[px]+=1</code></td></tr>
+            </table>
+
+            <h2>Bellman-Ford</h2>
+            <p><strong>For:</strong> Shortest from s, any wt (detect neg cycle).</p>
+            <ul>
+                <li>dist[s]=0, others=∞</li>
+                <li>for _ in range(V-1):</li>
+                <li>for each edge (u,v,w) in E:</li>
+                <li>if dist[u]≠∞ & dist[v] > dist[u]+w: dist[v]=dist[u]+w</li>
+                <li><em>Neg cycle check:</em> for each (u,v,w): if dist[v]>dist[u]+w: cycle!</li>
+            </ul>
+            <p><strong>Time:</strong> $O(VE)$, <strong>Space:</strong> $O(V)$</p>
+            <p><strong>Notes:</strong> Relax |V|-1 times; neg cycle if nth relax; path via prev; SPFA=queue opt (avg faster).</p>
+            <p><strong>Edge:</strong> Neg edges ok (no cycle); disconn ∞; self-loop neg=cycle.</p>
+            <p><strong>Vs Dijk:</strong> BF handles neg, slower; use BF if neg possible.</p>
+
+            <div class="clear"></div>
+        </div>
+        <div class="clear"></div>
+    </div>
+</body>
+</html>

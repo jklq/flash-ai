@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Flash AI — Topics & Condensor</title>
+    <link rel="stylesheet" href="/assets/main.css">
+    <style>
+        .condensor-panel {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            border: 1px solid var(--border-color, #e2e8f0);
+            border-radius: 8px;
+            background: var(--surface, #f8fafc);
+        }
+
+        .overlap-analysis {
+            margin: 1rem 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .concept-group {
+            margin-bottom: 1rem;
+            padding: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+        }
+
+        .member-list {
+            margin: 0.5rem 0;
+            padding-left: 1rem;
+        }
+
+        .member-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.25rem 0;
+            border-bottom: 1px dotted #eee;
+        }
+
+        .flashcard-link {
+            color: var(--primary, #3b82f6);
+            text-decoration: none;
+            font-size: 0.9em;
+        }
+
+        .flashcard-link:hover {
+            text-decoration: underline;
+        }
+
+        .condense-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .threshold-input {
+            width: 80px;
+            padding: 0.25rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .primary-concept {
+            font-weight: bold;
+            color: var(--primary, #3b82f6);
+        }
+
+        .similarity-badge {
+            background: var(--primary, #3b82f6);
+            color: white;
+            padding: 0.2rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.8em;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .tab {
+            padding: 0.5rem 1rem;
+            border: 1px solid #ccc;
+            border-bottom: none;
+            background: #f5f5f5;
+            cursor: pointer;
+            border-radius: 6px 6px 0 0;
+        }
+
+        .tab.active {
+            background: white;
+            border-bottom: 1px solid white;
+            margin-bottom: -1px;
+        }
+
+        .tab-content {
+            display: none;
+            border: 1px solid #ccc;
+            padding: 1rem;
+            border-radius: 0 6px 6px 6px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="site-header">
+        <div class="brand">Flash AI</div>
+        <nav class="nav-links">
+            <a href="/">Home</a>
+            <a href="/review">Review</a>
+            <a href="/upload">Upload</a>
+            <a href="/topics" aria-current="page">Topics</a>
+        </nav>
+    </header>
+    <main class="page">
+        <section class="condensor-panel">
+            <span class="eyebrow">Smart Organization</span>
+            <h1>Topic Condensor</h1>
+            <p class="lead">
+                Automatically merge overlapping concepts and see flashcards within each topic.
+                The condensor groups similar concepts to eliminate redundancy while maintaining study clarity.
+            </p>
+
+            <div class="condense-controls">
+                <label for="threshold">Similarity Threshold:</label>
+                <input type="number" id="threshold" class="threshold-input" value="0.5" min="0" max="1" step="0.1">
+                <button id="condense-btn" class="btn">Condense Concepts</button>
+                <button id="analyze-btn" class="btn btn-secondary">Analyze Overlaps</button>
+                <span id="condense-status" class="status"></span>
+            </div>
+
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('condensed')">Condensed Topics</div>
+                <div class="tab" onclick="switchTab('original')">Original Topics</div>
+                <div class="tab" onclick="switchTab('analysis')">Overlap Analysis</div>
+            </div>
+
+            <div id="condensed-tab" class="tab-content active">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Condensed Topic</th>
+                            <th>Members</th>
+                            <th>Flashcards</th>
+                            <th>Total Weight</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="condensed-body">
+                        <tr>
+                            <td colspan="5" class="muted">Click "Condense Concepts" to merge overlapping topics</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="original-tab" class="tab-content">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Concept</th>
+                            <th>Weight</th>
+                            <th>Description</th>
+                            <th>Flashcards</th>
+                        </tr>
+                    </thead>
+                    <tbody id="topics-body">
+                        <tr>
+                            <td colspan="4" class="muted">Loading topics…</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="analysis-tab" class="tab-content">
+                <div id="analysis-content">
+                    <p class="muted">Click "Analyze Overlaps" to see concept similarity analysis</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const tbody = document.getElementById("topics-body");
+        const condensedBody = document.getElementById("condensed-body");
+        const statusBox = document.getElementById("condense-status");
+        const thresholdInput = document.getElementById("threshold");
+        const condenseBtn = document.getElementById("condense-btn");
+        const analyzeBtn = document.getElementById("analyze-btn");
+
+        async function loadTopics() {
+            try {
+                const res = await fetch("/api/topics");
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.error || "Failed to load topics");
+                }
+                if (!data.topics || !data.topics.length) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="muted">No topics yet. Upload exam PDFs to generate insights.</td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = "";
+                data.topics.forEach(topic => {
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                    <td>${topic.name}</td>
+                    <td>${Number(topic.weight).toFixed(2)}</td>
+                    <td>${topic.description || "—"}</td>
+                    <td><a href="/api/topics/flashcards/${topic.id}" class="flashcard-link" onclick="showFlashcards(event, ${topic.id}, '${topic.name}')">View (${topic.name})</a></td>
+                `;
+                    tbody.appendChild(row);
+                });
+            } catch (err) {
+                statusBox.textContent = err.message;
+                statusBox.classList.add('error');
+            }
+        }
+
+        async function loadCondensedTopics() {
+            try {
+                const res = await fetch("/api/topics/condensed");
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.error || "Failed to load condensed topics");
+                }
+                if (!data.condensed_topics || !data.condensed_topics.length) {
+                    condensedBody.innerHTML = `<tr><td colspan="5" class="muted">No condensed topics yet. Run the condensor first.</td></tr>`;
+                    return;
+                }
+                condensedBody.innerHTML = "";
+                data.condensed_topics.forEach(topic => {
+                    const row = document.createElement("tr");
+                    const members = topic.members.map(m =>
+                        `<div class="member-item ${m.is_primary ? 'primary-concept' : ''}">
+                        <span>${m.name}</span>
+                        <span>
+                            <span class="similarity-badge">${(m.similarity_score * 100).toFixed(0)}%</span>
+                            <a href="/api/topics/flashcards/${m.id}" class="flashcard-link" onclick="showFlashcards(event, ${m.id}, '${m.name}')">Cards</a>
+                        </span>
+                    </div>`
+                    ).join('');
+
+                    row.innerHTML = `
+                    <td>
+                        <div class="concept-group">
+                            <strong>${topic.cluster.name}</strong>
+                            <div class="member-list">${members}</div>
+                        </div>
+                    </td>
+                    <td>${topic.members.length}</td>
+                    <td>${topic.flashcard_count}</td>
+                    <td>${topic.total_weight.toFixed(2)}</td>
+                    <td>
+                        <a href="/api/topics/flashcards/${topic.cluster.id}" class="flashcard-link" onclick="showFlashcards(event, ${topic.cluster.id}, '${topic.cluster.name}')">
+                            View All
+                        </a>
+                    </td>
+                `;
+                    condensedBody.appendChild(row);
+                });
+            } catch (err) {
+                statusBox.textContent = err.message;
+                statusBox.classList.add('error');
+            }
+        }
+
+        async function condenseTopics() {
+            const threshold = parseFloat(thresholdInput.value);
+            if (isNaN(threshold) || threshold < 0 || threshold > 1) {
+                statusBox.textContent = "Threshold must be between 0 and 1";
+                statusBox.classList.add('error');
+                return;
+            }
+
+            statusBox.textContent = "Condensing concepts...";
+            statusBox.classList.remove('error');
+            condenseBtn.disabled = true;
+
+            try {
+                const res = await fetch("/api/topics/condense", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ threshold })
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.error || "Failed to condense topics");
+                }
+
+                statusBox.textContent = data.message;
+                statusBox.classList.add('success');
+
+                // Refresh condensed topics
+                await loadCondensedTopics();
+
+            } catch (err) {
+                statusBox.textContent = err.message;
+                statusBox.classList.add('error');
+            } finally {
+                condenseBtn.disabled = false;
+            }
+        }
+
+        async function analyzeOverlaps() {
+            statusBox.textContent = "Analyzing concept overlaps...";
+            statusBox.classList.remove('error');
+            analyzeBtn.disabled = true;
+
+            try {
+                const res = await fetch("/api/topics/analysis");
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.error || "Failed to analyze overlaps");
+                }
+
+                const analysisContent = document.getElementById("analysis-content");
+
+                if (!data.potential_overlaps || data.potential_overlaps.length === 0) {
+                    analysisContent.innerHTML = `<p class="muted">No significant overlaps found between concepts.</p>`;
+                } else {
+                    const overlapsHTML = data.potential_overlaps.map(overlap => `
+                    <div class="concept-group">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <strong>${overlap.concept1}</strong>
+                            <span class="similarity-badge">${(overlap.similarity * 100).toFixed(0)}% similar</span>
+                        </div>
+                        <div style="margin: 0.5rem 0;">vs</div>
+                        <div><strong>${overlap.concept2}</strong></div>
+                        <div style="margin-top: 0.5rem; font-size: 0.9em; color: #666;">
+                            Weights: ${overlap.concept1_weight.toFixed(2)} vs ${overlap.concept2_weight.toFixed(2)}
+                            ${overlap.merge_recommendation ? '<br><span style="color: #10b981;">✓ Recommended for merging</span>' : ''}
+                        </div>
+                    </div>
+                `).join('');
+
+                    analysisContent.innerHTML = `
+                    <p><strong>Total Concepts:</strong> ${data.total_concepts}</p>
+                    <p><strong>Potential Overlaps:</strong> ${data.potential_overlaps.length}</p>
+                    <div class="overlap-analysis">
+                        ${overlapsHTML}
+                    </div>
+                `;
+                }
+
+                // Switch to analysis tab
+                switchTab('analysis');
+
+            } catch (err) {
+                statusBox.textContent = err.message;
+                statusBox.classList.add('error');
+            } finally {
+                analyzeBtn.disabled = false;
+            }
+        }
+
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            document.querySelector(`.tab:nth-child(${tabName === 'condensed' ? 1 : tabName === 'original' ? 2 : 3})`).classList.add('active');
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+        }
+
+        async function showFlashcards(event, conceptId, conceptName) {
+            event.preventDefault();
+
+            try {
+                const res = await fetch(`/api/topics/flashcards/${conceptId}`);
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.error || "Failed to load flashcards");
+                }
+
+                const flashcards = data.flashcards || [];
+                if (flashcards.length === 0) {
+                    alert(`No flashcards found for "${conceptName}"`);
+                    return;
+                }
+
+                // Create a simple flashcard viewer
+                const flashcardWindow = window.open('', '_blank', 'width=600,height=400');
+                flashcardWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Flashcards - ${conceptName}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; margin: 20px; }
+                        .flashcard { 
+                            border: 1px solid #ccc; 
+                            padding: 20px; 
+                            margin: 10px 0; 
+                            border-radius: 8px;
+                            background: #f9f9f9;
+                        }
+                        .front { font-weight: bold; margin-bottom: 10px; }
+                        .back { color: #333; }
+                    </style>
+                </head>
+                <body>
+                    <h2>Flashcards for "${conceptName}" (${flashcards.length} cards)</h2>
+                    ${flashcards.map((card, index) => `
+                        <div class="flashcard">
+                            <div class="front">Card ${index + 1}: ${card.front}</div>
+                            <div class="back">${card.back}</div>
+                        </div>
+                    `).join('')}
+                </body>
+                </html>
+            `);
+
+            } catch (err) {
+                statusBox.textContent = err.message;
+                statusBox.classList.add('error');
+            }
+        }
+
+        // Event listeners
+        condenseBtn.addEventListener('click', condenseTopics);
+        analyzeBtn.addEventListener('click', analyzeOverlaps);
+
+        // Load initial data
+        loadTopics();
+    </script>
+</body>
+
+</html>

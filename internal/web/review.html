@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Flash AI — Review</title>
+    <link rel="stylesheet" href="/assets/main.css">
+    <style>
+        .keyboard-hint {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.75rem;
+            color: var(--text-subtle);
+            z-index: 100;
+            opacity: 0.8;
+            transition: opacity 0.2s ease;
+        }
+
+        .keyboard-hint:hover {
+            opacity: 1;
+        }
+
+        .keyboard-hint kbd {
+            display: inline-block;
+            padding: 0.2rem 0.4rem;
+            margin: 0 0.1rem;
+            background: var(--surface-raised);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+        }
+
+        .help-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(5, 5, 7, 0.9);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .help-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .help-content {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .help-content h3 {
+            margin-bottom: 1rem;
+        }
+
+        .shortcut-list {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .shortcut-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .shortcut-item:last-child {
+            border-bottom: none;
+        }
+
+        .shortcut-keys {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .progress-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--surface);
+            z-index: 100;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .card-flip {
+            animation: flipCard 0.4s ease;
+        }
+
+        @keyframes flipCard {
+            0% {
+                transform: rotateY(0deg);
+            }
+
+            50% {
+                transform: rotateY(90deg);
+            }
+
+            100% {
+                transform: rotateY(0deg);
+            }
+        }
+
+        .rating-btn {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .rating-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            transform: translate(-50%, -50%);
+            transition: width 0.3s ease, height 0.3s ease;
+        }
+
+        .rating-btn:active::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(79, 140, 255, 0.4);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(79, 140, 255, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(79, 140, 255, 0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="progress-indicator">
+        <div class="progress-bar" id="progress-bar"></div>
+    </div>
+
+    <header class="site-header">
+        <div class="brand">Flash AI</div>
+        <nav class="nav-links">
+            <a href="/">Home</a>
+            <a href="/review" aria-current="page">Review</a>
+            <a href="/upload">Upload</a>
+            <a href="/topics">Topics</a>
+            <a href="/flashcards">All Flashcards</a>
+        </nav>
+    </header>
+
+    <main class="page">
+        <section id="card-section" class="panel hidden">
+            <div class="flashcard">
+                <div class="flashcard-header">
+                    <div id="card-meta" class="muted"></div>
+                    <span class="chip accent">Due</span>
+                </div>
+                <div class="flashcard-body">
+                    <h2 id="card-front"></h2>
+                    <article id="card-back" class="answer hidden"></article>
+                </div>
+                <div class="rating-row">
+                    <button id="show-answer" class="btn">Show Answer</button>
+                    <div id="rating-buttons" class="rating-row hidden">
+                        <button data-rating="again" class="btn ghost rating-btn">Again</button>
+                        <button data-rating="hard" class="btn secondary rating-btn">Hard</button>
+                        <button data-rating="good" class="btn rating-btn">Good</button>
+                        <button data-rating="easy" class="btn rating-btn">Easy</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <section id="empty-state" class="panel hidden">
+            <span class="eyebrow">All Clear</span>
+            <h2>No cards are waiting</h2>
+            <p class="muted">Everything is up to date. Feed new documents or check back later when the queue unlocks
+                again.</p>
+            <div class="btn-row" style="margin-top: 1.5rem;">
+                <a class="btn secondary" href="/upload">Upload Material</a>
+            </div>
+        </section>
+        <pre id="review-status" class="status hidden"></pre>
+    </main>
+
+    <div class="keyboard-hint" id="keyboard-hint">
+        Press <kbd>?</kbd> for shortcuts
+    </div>
+
+    <div class="help-overlay" id="help-overlay">
+        <div class="help-content">
+            <h3>Keyboard Shortcuts</h3>
+            <div class="shortcut-list">
+                <div class="shortcut-item">
+                    <span>Show Answer</span>
+                    <div class="shortcut-keys">
+                        <kbd>Space</kbd>
+                        <kbd>Enter</kbd>
+                    </div>
+                </div>
+                <div class="shortcut-item">
+                    <span>Rate Again</span>
+                    <div class="shortcut-keys">
+                        <kbd>1</kbd>
+                    </div>
+                </div>
+                <div class="shortcut-item">
+                    <span>Rate Hard</span>
+                    <div class="shortcut-keys">
+                        <kbd>2</kbd>
+                    </div>
+                </div>
+                <div class="shortcut-item">
+                    <span>Rate Good</span>
+                    <div class="shortcut-keys">
+                        <kbd>3</kbd>
+                    </div>
+                </div>
+                <div class="shortcut-item">
+                    <span>Rate Easy</span>
+                    <div class="shortcut-keys">
+                        <kbd>4</kbd>
+                    </div>
+                </div>
+                <div class="shortcut-item">
+                    <span>Toggle Help</span>
+                    <div class="shortcut-keys">
+                        <kbd>?</kbd>
+                        <kbd>H</kbd>
+                    </div>
+                </div>
+                <div class="shortcut-item">
+                    <span>Pause/Resume</span>
+                    <div class="shortcut-keys">
+                        <kbd>P</kbd>
+                    </div>
+                </div>
+            </div>
+            <div class="btn-row" style="margin-top: 1.5rem;">
+                <button class="btn" id="close-help">Close</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        const cardSection = document.getElementById("card-section");
+        const emptyState = document.getElementById("empty-state");
+        const cardFront = document.getElementById("card-front");
+        const cardBack = document.getElementById("card-back");
+        const meta = document.getElementById("card-meta");
+        const showAnswerBtn = document.getElementById("show-answer");
+        const ratingContainer = document.getElementById("rating-buttons");
+        const statusBox = document.getElementById("review-status");
+        const helpOverlay = document.getElementById("help-overlay");
+        const closeHelpBtn = document.getElementById("close-help");
+        const progressBar = document.getElementById("progress-bar");
+        const keyboardHint = document.getElementById("keyboard-hint");
+
+        let currentCard = null;
+        let cardsReviewed = 0;
+        let isPaused = false;
+        let answerShown = false;
+
+        // Initialize keyboard shortcuts
+        document.addEventListener("keydown", handleKeyPress);
+
+        function handleKeyPress(event) {
+            // Don't trigger shortcuts when typing in input fields
+            if (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA") {
+                return;
+            }
+
+            const key = event.key.toLowerCase();
+
+            // Help shortcuts
+            if (key === "?" || key === "h") {
+                toggleHelp();
+                return;
+            }
+
+            // Pause/Resume
+            if (key === "p") {
+                togglePause();
+                return;
+            }
+
+            // Don't process other shortcuts if paused or no card
+            if (isPaused || !currentCard) {
+                return;
+            }
+
+            // Show answer shortcuts
+            if ((key === " " || key === "enter") && !answerShown) {
+                event.preventDefault();
+                showAnswer();
+                return;
+            }
+
+            // Rating shortcuts (only work when answer is shown)
+            if (answerShown) {
+                if (key === "1") {
+                    rateCard("again");
+                } else if (key === "2") {
+                    rateCard("hard");
+                } else if (key === "3") {
+                    rateCard("good");
+                } else if (key === "4") {
+                    rateCard("easy");
+                }
+            }
+        }
+
+        function toggleHelp() {
+            helpOverlay.classList.toggle("active");
+        }
+
+        function togglePause() {
+            isPaused = !isPaused;
+            if (isPaused) {
+                statusBox.classList.remove("hidden");
+                statusBox.textContent = "Review paused. Press 'P' to resume.";
+                cardSection.style.opacity = "0.5";
+            } else {
+                statusBox.classList.add("hidden");
+                cardSection.style.opacity = "1";
+            }
+        }
+
+        function showAnswer() {
+            if (answerShown) return;
+
+            answerShown = true;
+            cardBack.classList.add("card-flip");
+            cardBack.classList.remove("hidden");
+            ratingContainer.classList.remove("hidden");
+            showAnswerBtn.classList.add("hidden");
+
+            // Remove animation class after animation completes
+            setTimeout(() => {
+                cardBack.classList.remove("card-flip");
+            }, 400);
+
+            // Focus on the rating buttons for better keyboard navigation
+            const firstRatingBtn = document.querySelector('[data-rating="again"]');
+            if (firstRatingBtn) {
+                firstRatingBtn.focus();
+            }
+        }
+
+        async function rateCard(rating) {
+            if (!currentCard || !answerShown) return;
+
+            // Add visual feedback
+            const ratingBtn = document.querySelector(`[data-rating="${rating}"]`);
+            if (ratingBtn) {
+                ratingBtn.classList.add("pulse");
+            }
+
+            try {
+                const res = await fetch(`/api/cards/${currentCard.id}/review`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ rating })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.error || "Review failed");
+                }
+
+                cardsReviewed++;
+                updateProgress();
+
+                statusBox.classList.remove("hidden");
+                statusBox.textContent = `Recorded ${rating.toUpperCase()}. Next due ${formatDate(data.card?.due)}.`;
+
+                // Reset state and fetch next card
+                answerShown = false;
+                await fetchCard();
+            } catch (err) {
+                statusBox.classList.remove("hidden");
+                statusBox.textContent = "Error submitting review: " + err.message;
+            }
+        }
+
+        function updateProgress() {
+            // Simple progress indicator - could be enhanced with actual total cards count
+            const progress = Math.min((cardsReviewed % 10) * 10, 100);
+            progressBar.style.width = `${progress}%`;
+        }
+
+        async function fetchCard() {
+            if (isPaused) return;
+
+            try {
+                const res = await fetch("/api/cards/next");
+                const data = await res.json();
+                if (!data.card) {
+                    cardSection.classList.add("hidden");
+                    ratingContainer.classList.add("hidden");
+                    showAnswerBtn.classList.add("hidden");
+                    cardBack.classList.add("hidden");
+                    emptyState.classList.remove("hidden");
+                    statusBox.classList.add("hidden");
+                    statusBox.textContent = "";
+                    progressBar.style.width = "100%";
+                    return;
+                }
+
+                currentCard = data.card;
+                answerShown = false;
+
+                emptyState.classList.add("hidden");
+                cardSection.classList.remove("hidden");
+                cardSection.classList.add("fade-in");
+
+                cardFront.textContent = currentCard.front;
+                cardBack.innerHTML = markdownToHTML(currentCard.back);
+                cardBack.classList.add("hidden");
+                ratingContainer.classList.add("hidden");
+                showAnswerBtn.classList.remove("hidden");
+
+                meta.innerHTML = `
+                <span class="badge">${currentCard.concept || "General"}</span>
+                <span class="muted" style="margin-left: 0.75rem;">Due: ${formatDate(currentCard.due)}</span>
+            `;
+
+                // Remove animation class after animation completes
+                setTimeout(() => {
+                    cardSection.classList.remove("fade-in");
+                }, 300);
+
+            } catch (err) {
+                statusBox.classList.remove("hidden");
+                statusBox.textContent = "Failed to load card: " + err.message;
+            }
+        }
+
+        function formatDate(isoString) {
+            if (!isoString) return "now";
+            const date = new Date(isoString);
+            return date.toLocaleString();
+        }
+
+        function markdownToHTML(text) {
+            if (!text) return "";
+            return text
+                .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+                .replace(/\*(.+?)\*/g, "<em>$1</em>")
+                .replace(/`(.+?)`/g, "<code>$1</code>")
+                .replace(/\n/g, "<br/>");
+        }
+
+        // Event listeners
+        showAnswerBtn.addEventListener("click", showAnswer);
+
+        ratingContainer.addEventListener("click", async (event) => {
+            if (!currentCard) return;
+            const rating = event.target.dataset.rating;
+            if (!rating) return;
+            await rateCard(rating);
+        });
+
+        closeHelpBtn.addEventListener("click", toggleHelp);
+        helpOverlay.addEventListener("click", (event) => {
+            if (event.target === helpOverlay) {
+                toggleHelp();
+            }
+        });
+
+        // Initialize
+        fetchCard();
+        updateProgress();
+    </script>
+</body>
+
+</html>

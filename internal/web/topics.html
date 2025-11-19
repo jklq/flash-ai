@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Flash AI — Topics & Condensor</title>
+    <link rel="stylesheet" href="/assets/main.css">
+    <style>
+        /* Enhanced Topic Management Styles */
+        .condensor-panel {
+            background: linear-gradient(145deg, var(--surface), var(--surface-raised));
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: clamp(1.75rem, 4vw, 2.5rem);
+            box-shadow: 0 30px 60px rgba(5, 7, 10, 0.55);
+        }
+
+        .overlap-analysis {
+            margin: 1rem 0;
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 0.5rem;
+            border-radius: 12px;
+            background: var(--surface-subtle);
+            border: 1px solid var(--border);
+        }
+
+        .concept-group {
+            margin-bottom: 1.25rem;
+            padding: 1.25rem;
+            border-radius: 12px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            transition: all 0.2s ease;
+        }
+
+        .concept-group:hover {
+            border-color: var(--accent-muted);
+            background: rgba(79, 140, 255, 0.05);
+            transform: translateY(-1px);
+        }
+
+        .member-list {
+            margin: 0.75rem 0;
+            padding-left: 0;
+        }
+
+        .member-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            background: var(--surface-subtle);
+            border: 1px solid rgba(110, 115, 134, 0.15);
+            margin-bottom: 0.5rem;
+            transition: all 0.18s ease;
+        }
+
+        .member-item:hover {
+            background: rgba(79, 140, 255, 0.08);
+            border-color: var(--accent-muted);
+        }
+
+        .member-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .flashcard-link {
+            color: var(--accent);
+            text-decoration: none;
+            font-size: 0.9em;
+            font-weight: 500;
+            transition: color 0.18s ease;
+        }
+
+        .flashcard-link:hover {
+            color: var(--accent-strong);
+            text-decoration: underline;
+        }
+
+        .condense-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+            padding: 1.5rem;
+            border-radius: 14px;
+            background: var(--surface-subtle);
+            border: 1px solid var(--border);
+        }
+
+        .threshold-input {
+            width: 100px;
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: var(--surface);
+            color: var(--text);
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: border-color 0.18s ease;
+        }
+
+        .threshold-input:focus {
+            border-color: var(--accent);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(79, 140, 255, 0.2);
+        }
+
+        .primary-concept {
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .similarity-badge {
+            background: linear-gradient(120deg, var(--accent), #2f68ff 80%);
+            color: var(--bg);
+            padding: 0.35rem 0.8rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            box-shadow: 0 2px 8px rgba(79, 140, 255, 0.3);
+        }
+
+        /* Enhanced Tab System */
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin: 2rem 0 1rem 0;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0;
+        }
+
+        .tab {
+            padding: 0.875rem 1.5rem;
+            border: 1px solid transparent;
+            border-bottom: none;
+            background: transparent;
+            color: var(--text-subtle);
+            cursor: pointer;
+            border-radius: 12px 12px 0 0;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+            transition: all 0.18s ease;
+            position: relative;
+        }
+
+        .tab::before {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: transparent;
+            transition: background 0.18s ease;
+        }
+
+        .tab:hover {
+            color: var(--text);
+            background: var(--surface-subtle);
+        }
+
+        .tab.active {
+            background: var(--surface);
+            color: var(--text);
+            border-color: var(--border);
+            border-bottom: 1px solid var(--surface);
+            margin-bottom: -1px;
+        }
+
+        .tab.active::before {
+            background: var(--accent);
+        }
+
+        .tab-content {
+            display: none;
+            border: 1px solid var(--border);
+            border-radius: 0 0 12px 12px;
+            padding: 0;
+            background: var(--surface);
+            overflow: hidden;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Enhanced Table Styles */
+        .tab-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0;
+        }
+
+        .tab-content th {
+            background: var(--surface-raised);
+            padding: 1rem 1.25rem;
+            text-align: left;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            color: var(--text-subtle);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab-content td {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text);
+        }
+
+        .tab-content tbody tr {
+            transition: background 0.18s ease;
+        }
+
+        .tab-content tbody tr:hover {
+            background: rgba(79, 140, 255, 0.06);
+        }
+
+        .tab-content tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Status Messages */
+        .status {
+            background: #0b0d12;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--text-subtle);
+            white-space: pre-wrap;
+            margin-top: 1rem;
+        }
+
+        .status.error {
+            border-color: rgba(255, 107, 107, 0.5);
+            color: #ff9b9b;
+            background: rgba(255, 107, 107, 0.1);
+        }
+
+        .status.success {
+            border-color: rgba(45, 212, 191, 0.5);
+            color: var(--success);
+            background: rgba(45, 212, 191, 0.1);
+        }
+
+        /* Empty States */
+        .empty-state {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: var(--text-subtle);
+        }
+
+        .empty-state .icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 1rem;
+            border-radius: 12px;
+            background: var(--surface-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        /* Action Buttons Enhancement */
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .btn-sm {
+            height: 2.25rem;
+            padding: 0 1rem;
+            font-size: 0.875rem;
+            border-radius: 8px;
+        }
+
+        /* Loading State */
+        .loading {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-subtle);
+        }
+
+        .loading::after {
+            content: '';
+            width: 12px;
+            height: 12px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .condense-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .condense-controls .btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .tabs {
+                flex-direction: column;
+                gap: 0.25rem;
+            }
+
+            .tab {
+                border-radius: 8px;
+                border: 1px solid var(--border);
+                margin-bottom: 0.25rem;
+            }
+
+            .tab.active {
+                margin-bottom: 0.25rem;
+            }
+
+            .tab-content {
+                border-radius: 8px;
+                margin-top: 0.25rem;
+            }
+
+            .member-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+
+            .action-buttons {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header class="site-header">
+        <div class="brand">Flash AI</div>
+        <nav class="nav-links">
+            <a href="/">Home</a>
+            <a href="/review">Review</a>
+            <a href="/upload">Upload</a>
+            <a href="/topics" aria-current="page">Topics</a>
+            <a href="/flashcards">All Flashcards</a>
+        </nav>
+    </header>
+    
+    <main class="page">
+        <section class="condensor-panel">
+            <span class="eyebrow">Smart Organization</span>
+            <h1>Topic Condensor</h1>
+            <p class="lead">
+                Automatically merge overlapping concepts and see flashcards within each topic.
+                The condensor groups similar concepts to eliminate redundancy while maintaining study clarity.
+            </p>
+
+            <div class="condense-controls">
+                <label for="threshold" style="font-weight: 500; color: var(--text);">Similarity Threshold:</label>
+                <input type="number" id="threshold" class="threshold-input" value="0.5" min="0" max="1" step="0.1">
+                <button id="condense-btn" class="btn">Condense Concepts</button>
+                <button id="analyze-btn" class="btn secondary">Analyze Overlaps</button>
+                <div id="condense-status" class="status" style="display: none;"></div>
+            </div>
+
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('condensed')">
+                    <span>Condensed Topics</span>
+                </div>
+                <div class="tab" onclick="switchTab('original')">
+                    <span>Original Topics</span>
+                </div>
+                <div class="tab" onclick="switchTab('analysis')">
+                    <span>Overlap Analysis</span>
+                </div>
+            </div>
+
+            <div id="condensed-tab" class="tab-content active">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Condensed Topic</th>
+                            <th>Members</th>
+                            <th>Flashcards</th>
+                            <th>Total Weight</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="condensed-body">
+                        <tr>
+                            <td colspan="5">
+                                <div class="empty-state">
+                                    <div class="icon">🔄</div>
+                                    <p>Click "Condense Concepts" to merge overlapping topics</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="original-tab" class="tab-content">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Concept</th>
+                            <th>Weight</th>
+                            <th>Description</th>
+                            <th>Flashcards</th>
+                        </tr>
+                    </thead>
+                    <tbody id="topics-body">
+                        <tr>
+                            <td colspan="4">
+                                <div class="empty-state">
+                                    <div class="icon">📚</div>
+                                    <p>Loading topics…</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="analysis-tab" class="tab-content">
+                <div id="analysis-content">
+                    <div class="empty-state">
+                        <div class="icon">🔍</div>
+                        <p>Click "Analyze Overlaps" to see concept similarity analysis</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const tbody = document.getElementById("topics-body");
+        const condensedBody = document.getElementById("condensed-body");
+        const statusBox = document.getElementById("condense-status");
+        const thresholdInput = document.getElementById("threshold");
+        const condenseBtn = document.getElementById("condense-btn");
+        const analyzeBtn = document.getElementById("analyze-btn");
+
+        async function loadTopics() {
+            try {
+                const res = await fetch("/api/topics");
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.error || "Failed to load topics");
+                }
+                if (!data.topics || !data.topics.length) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="4">
+                                <div class="empty-state">
+                                    <div class="icon">📝</div>
+                                    <p>No topics yet. Upload exam PDFs to generate insights.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+                tbody.innerHTML = "";
+                data.topics.forEach(topic => {
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                        <td><strong>${topic.name}</strong></td>
+                        <td><span class="badge">${Number(topic.weight).toFixed(2)}</span></td>
+                        <td>${topic.description || "—"}</td>
+                        <td>
+                            <div class="action-buttons">
+                                <a href="/api/topics/flashcards/${topic.id}" class="flashcard-link" onclick="showFlashcards(event, ${topic.id}, '${topic.name}')">
+                                    View (${topic.flashcard_count || 0} cards)
+                                </a>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (err) {
+                showStatus(err.message, 'error');
+            }
+        }
+
+        async function loadCondensedTopics() {
+            try {
+                const res = await fetch("/api/topics/condensed");
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.error || "Failed to load condensed topics");
+                }
+                if (!data.condensed_topics || !data.condensed_topics.length) {
+                    condensedBody.innerHTML = `
+                        <tr>
+                            <td colspan="5">
+                                <div class="empty-state">
+                                    <div class="icon">🔄</div>
+                                    <p>No condensed topics yet. Run the condensor first.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+                condensedBody.innerHTML = "";
+                data.condensed_topics.forEach(topic => {
+                    const members = topic.members.map(m =>
+                        `<div class="member-item ${m.is_primary ? 'primary-concept' : ''}">
+                            <span>${m.name}</span>
+                            <div class="action-buttons">
+                                <span class="similarity-badge">${(m.similarity_score * 100).toFixed(0)}%</span>
+                                <a href="/api/topics/flashcards/${m.id}" class="flashcard-link" onclick="showFlashcards(event, ${m.id}, '${m.name}')">Cards</a>
+                            </div>
+                        </div>`
+                    ).join('');
+
+                    const row = document.createElement("tr");
+                    row.innerHTML = `
+                        <td>
+                            <div class="concept-group">
+                                <strong>${topic.cluster.name}</strong>
+                                <div class="member-list">${members}</div>
+                            </div>
+                        </td>
+                        <td><span class="badge accent">${topic.members.length}</span></td>
+                        <td><span class="badge">${topic.flashcard_count}</span></td>
+                        <td><span class="badge">${topic.total_weight.toFixed(2)}</span></td>
+                        <td>
+                            <a href="/api/topics/flashcards/${topic.cluster.id}" class="flashcard-link" onclick="showFlashcards(event, ${topic.cluster.id}, '${topic.cluster.name}')">
+                                View All Cards
+                            </a>
+                        </td>
+                    `;
+                    condensedBody.appendChild(row);
+                });
+            } catch (err) {
+                showStatus(err.message, 'error');
+            }
+        }
+
+        async function condenseTopics() {
+            const threshold = parseFloat(thresholdInput.value);
+            if (isNaN(threshold) || threshold < 0 || threshold > 1) {
+                showStatus("Threshold must be between 0 and 1", 'error');
+                return;
+            }
+
+            showStatus("Condensing concepts...", 'loading');
+            condenseBtn.disabled = true;
+            condenseBtn.textContent = "Condensing...";
+
+            try {
+                const res = await fetch("/api/topics/condense", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ threshold })
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.error || "Failed to condense topics");
+                }
+
+                showStatus(data.message || "Concepts condensed successfully!", 'success');
+                
+                // Refresh condensed topics
+                await loadCondensedTopics();
+                switchTab('condensed');
+
+            } catch (err) {
+                showStatus(err.message, 'error');
+            } finally {
+                condenseBtn.disabled = false;
+                condenseBtn.textContent = "Condense Concepts";
+            }
+        }
+
+        async function analyzeOverlaps() {
+            showStatus("Analyzing concept overlaps...", 'loading');
+            analyzeBtn.disabled = true;
+            analyzeBtn.textContent = "Analyzing...";
+
+try {
+                const res = await fetch("/api/topics/analysis/");
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.error || "Failed to analyze overlaps");
+                }
+
+                const analysisContent = document.getElementById("analysis-content");
+
+                if (!data.potential_overlaps || data.potential_overlaps.length === 0) {
+                    analysisContent.innerHTML = `
+                        <div class="empty-state">
+                            <div class="icon">✅</div>
+                            <p>No significant overlaps found between concepts.</p>
+                        </div>
+                    `;
+                } else {
+                    const overlapsHTML = data.potential_overlaps.map(overlap => `
+                        <div class="concept-group">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                <strong>${overlap.concept1}</strong>
+                                <span class="similarity-badge">${(overlap.similarity * 100).toFixed(0)}% similar</span>
+                            </div>
+                            <div style="text-align: center; margin: 0.5rem 0; color: var(--text-subtle);">vs</div>
+                            <div style="margin-bottom: 0.75rem;"><strong>${overlap.concept2}</strong></div>
+                            <div style="font-size: 0.9em; color: var(--text-subtle);">
+                                <div>Weights: <span class="badge">${overlap.concept1_weight.toFixed(2)}</span> vs <span class="badge">${overlap.concept2_weight.toFixed(2)}</span></div>
+                                ${overlap.merge_recommendation ? '<div style="margin-top: 0.5rem;"><span class="badge accent">✓ Recommended for merging</span></div>' : ''}
+                            </div>
+                        </div>
+                    `).join('');
+
+                    analysisContent.innerHTML = `
+                        <div style="padding: 1.5rem; border-bottom: 1px solid var(--border);">
+                            <h3 style="margin-bottom: 0.5rem;">Analysis Summary</h3>
+                            <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
+                                <div><strong>Total Concepts:</strong> <span class="badge accent">${data.total_concepts}</span></div>
+                                <div><strong>Potential Overlaps:</strong> <span class="badge">${data.potential_overlaps.length}</span></div>
+                            </div>
+                        </div>
+                        <div class="overlap-analysis">
+                            ${overlapsHTML}
+                        </div>
+                    `;
+                }
+
+                // Switch to analysis tab
+                switchTab('analysis');
+                showStatus("Analysis completed successfully!", 'success');
+
+            } catch (err) {
+                showStatus(err.message, 'error');
+            } finally {
+                analyzeBtn.disabled = false;
+                analyzeBtn.textContent = "Analyze Overlaps";
+            }
+        }
+
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+            const tabMap = {
+                'condensed': 1,
+                'original': 2,
+                'analysis': 3
+            };
+
+            const tabIndex = tabMap[tabName];
+            if (tabIndex) {
+                document.querySelector(`.tab:nth-child(${tabIndex})`).classList.add('active');
+                document.getElementById(`${tabName}-tab`).classList.add('active');
+            }
+        }
+
+        function showStatus(message, type) {
+            if (type === 'loading') {
+                statusBox.innerHTML = `<div class="loading">${message}</div>`;
+                statusBox.className = 'status';
+            } else {
+                statusBox.textContent = message;
+                statusBox.className = `status ${type}`;
+            }
+            statusBox.style.display = 'block';
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusBox.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        async function showFlashcards(event, conceptId, conceptName) {
+            event.preventDefault();
+
+            try {
+                const res = await fetch(`/api/topics/flashcards/${conceptId}`);
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.error || "Failed to load flashcards");
+                }
+
+                const flashcards = data.flashcards || [];
+                if (flashcards.length === 0) {
+                    showStatus(`No flashcards found for "${conceptName}"`, 'error');
+                    return;
+                }
+
+                // Create a modal-like flashcard viewer
+                const modalWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes');
+                modalWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>Flashcards - ${conceptName}</title>
+                        <style>
+                            body { 
+                                font-family: "Inter", system-ui, sans-serif; 
+                                margin: 0; 
+                                padding: 2rem; 
+                                background: #050507; 
+                                color: #f5f7fb;
+                                line-height: 1.6;
+                            }
+                            .header {
+                                text-align: center;
+                                margin-bottom: 2rem;
+                                padding-bottom: 1rem;
+                                border-bottom: 1px solid #1e232c;
+                            }
+                            .flashcard { 
+                                border: 1px solid #1e232c; 
+                                padding: 1.5rem; 
+                                margin: 1rem 0; 
+                                border-radius: 12px;
+                                background: #0d1016;
+                                transition: all 0.2s ease;
+                            }
+                            .flashcard:hover {
+                                border-color: #4f8cff;
+                                transform: translateY(-2px);
+                                box-shadow: 0 10px 25px rgba(79, 140, 255, 0.15);
+                            }
+                            .front { 
+                                font-weight: 600; 
+                                margin-bottom: 1rem; 
+                                color: #4f8cff;
+                                font-size: 1.1rem;
+                            }
+                            .back { 
+                                color: #a2a7b8; 
+                                padding-left: 1rem;
+                                border-left: 3px solid #4f8cff;
+                            }
+                            .count {
+                                text-align: center;
+                                color: #a2a7b8;
+                                margin-bottom: 2rem;
+                            }
+                            .close-btn {
+                                position: fixed;
+                                top: 1rem;
+                                right: 1rem;
+                                background: #4f8cff;
+                                color: #050507;
+                                border: none;
+                                padding: 0.5rem 1rem;
+                                border-radius: 8px;
+                                cursor: pointer;
+                                font-weight: 600;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <button class="close-btn" onclick="window.close()">Close</button>
+                        <div class="header">
+                            <h1>Flashcards for "${conceptName}"</h1>
+                            <div class="count">${flashcards.length} cards</div>
+                        </div>
+                        ${flashcards.map((card, index) => `
+                            <div class="flashcard">
+                                <div class="front">Card ${index + 1}: ${card.front}</div>
+                                <div class="back">${card.back}</div>
+                            </div>
+                        `).join('')}
+                    </body>
+                    </html>
+                `);
+
+            } catch (err) {
+                showStatus(err.message, 'error');
+            }
+        }
+
+        // Event listeners
+        condenseBtn.addEventListener('click', condenseTopics);
+        analyzeBtn.addEventListener('click', analyzeOverlaps);
+
+        // Load initial data
+        loadTopics();
+    </script>
+</body>
+
+</html>

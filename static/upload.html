@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Flash AI — Upload</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <header>
+        <h1>Flash AI</h1>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/review">Review</a>
+            <a href="/upload" aria-current="page">Upload</a>
+            <a href="/topics">Topics</a>
+        </nav>
+    </header>
+    <main class="container">
+        <section class="card">
+            <span class="badge">Document Ingestion</span>
+            <h2>Upload source material</h2>
+            <p>
+                Classify each upload as information (text, notes, books) or exams. The ingestion service routes them
+                through concept detection, flashcard generation, and topic weighting.
+            </p>
+            <form id="upload-form">
+                <label>
+                    Document type
+                    <select id="doc-type" name="docType">
+                        <option value="information">Information — generate flashcards</option>
+                        <option value="exam">Exam — extract topic frequencies</option>
+                    </select>
+                </label>
+                <label>
+                    PDF files
+                    <input id="file-input" type="file" name="files" multiple accept="application/pdf">
+                </label>
+                <div class="btn-bar">
+                    <button type="submit">Upload &amp; Process</button>
+                    <button type="button" id="reset-form">Reset</button>
+                </div>
+            </form>
+            <pre id="upload-status" class="status hidden"></pre>
+        </section>
+        <section id="upload-results" class="card hidden">
+            <div class="btn-bar">
+                <span class="badge">Results</span>
+            </div>
+            <div id="results-body"></div>
+        </section>
+    </main>
+    <script>
+        const POLL_INTERVAL_MS = 2000;
+        const form = document.getElementById("upload-form");
+        const statusBox = document.getElementById("upload-status");
+        const resultsSection = document.getElementById("upload-results");
+        const resultsBody = document.getElementById("results-body");
+        const resetButton = document.getElementById("reset-form");
+        const fileInput = document.getElementById("file-input");
+        const docTypeInput = document.getElementById("doc-type");
+
+        let pollTimer = null;
+        let activeJobId = null;
+        let currentDocType = docTypeInput.value;
+        let jobStartTime = 0;
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const files = fileInput.files;
+            const docType = docTypeInput.value;
+            if (!files.length) {
+                showStatus("Select at least one PDF to continue.", true);
+                return;
+            }
+
+            stopPolling(true);
+            currentDocType = docType;
+            jobStartTime = Date.now();
+
+            const fileCount = files.length;
+            const fileNames = Array.from(files).map(f => f.name).join(", ");
+            showStatus(`Uploading ${fileCount} file${fileCount > 1 ? "s" : ""}: ${fileNames}`, false);
+            resultsSection.classList.add("hidden");
+            resultsBody.innerHTML = "";
+
+            try {
+                const payload = new FormData();
+                payload.append("docType", docType);
+                Array.from(files).forEach(file => payload.append("files", file));
+
+                const response = await fetch("/api/documents/jobs", {
+                    method: "POST",
+                    body: payload
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data?.error || "Upload failed");
+                }
+                if (!data?.jobId) {
+                    throw new Error("Job ID missing from response");
+                }
+
+                handleJobUpdate(data);
+                startPolling(data.jobId);
+            } catch (err) {
+                stopPolling(true);
+                showStatus("Upload failed: " + err.message, true);
+            }
+        });
+
+        resetButton.addEventListener("click", () => {
+            form.reset();
+            fileInput.value = "";
+            docTypeInput.value = "information";
+            currentDocType = docTypeInput.value;
+            stopPolling(true);
+            jobStartTime = 0;
+            statusBox.classList.add("hidden");
+            statusBox.textContent = "";
+            resultsSection.classList.add("hidden");
+            resultsBody.innerHTML = "";
+        });
+
+        function startPolling(jobId) {
+            stopPolling();
+            activeJobId = jobId;
+
+            const poll = async () => {
+                try {
+                    const response = await fetch(`/api/documents/jobs/${encodeURIComponent(jobId)}`);
+                    const job = await response.json();
+                    if (!response.ok) {
+                        throw new Error(job?.error || `Status check failed (${response.status})`);
+                    }
+                    handleJobUpdate(job);
+                    if (job.status === "complete" || job.status === "failed") {
+                        stopPolling(true);
+                        return;
+                    }
+                    pollTimer = setTimeout(poll, POLL_INTERVAL_MS);
+                } catch (err) {
+                    stopPolling(true);
+                    showStatus("Progress check failed: " + err.message, true);
+                }
+            };
+
+            pollTimer = setTimeout(poll, POLL_INTERVAL_MS);
+        }
+
+        function stopPolling(resetId = false) {
+            if (pollTimer) {
+                clearTimeout(pollTimer);
+                pollTimer = null;
+            }
+            if (resetId) {
+                activeJobId = null;
+            }
+        }
+
+        function handleJobUpdate(job) {
+            const files = Array.isArray(job?.files) ? job.files : [];
+            const total = files.length;
+            const completed = files.filter(f => f.status === "complete").length;
+            const failed = files.filter(f => f.status === "error").length;
+            const activeFile = files.find(f => f.status === "processing");
+
+            let message = "";
+            let isError = false;
+
+            if (job.status === "failed") {
+                message = job.error || "Processing failed.";
+                isError = true;
+            } else if (job.status === "complete") {
+                const elapsed = jobStartTime ? ((Date.now() - jobStartTime) / 1000).toFixed(1) : null;
+                message = `✓ Completed: ${completed} of ${total} document${total === 1 ? "" : "s"} processed successfully`;
+                if (failed > 0) {
+                    message += `, ${failed} failed`;
+                    isError = true;
+                }
+                if (elapsed) {
+                    message += ` (${elapsed}s)`;
+                }
+            } else {
+                if (activeFile) {
+                    const detail = activeFile.message ? ` — ${activeFile.message}` : "";
+                    const progress = typeof activeFile.percent === "number" && activeFile.percent > 0 ? ` (${activeFile.percent}%)` : "";
+                    message = `Processing ${activeFile.name}${detail}${progress}`;
+                } else if (total > 0) {
+                    message = `Processing ${completed}/${total} document${total === 1 ? "" : "s"}...`;
+                } else {
+                    message = "Preparing upload...";
+                }
+                if (failed > 0) {
+                    message += ` (${failed} error${failed === 1 ? "" : "s"} so far)`;
+                }
+            }
+
+            showStatus(message, isError);
+            renderResults(Array.isArray(job?.results) ? job.results : []);
+        }
+
+        function renderResults(results) {
+            if (!results.length) {
+                resultsSection.classList.add("hidden");
+                resultsBody.innerHTML = "";
+                return;
+            }
+
+            resultsSection.classList.remove("hidden");
+            resultsBody.innerHTML = "";
+
+            results.forEach(entry => {
+                const article = document.createElement("article");
+                article.className = "card";
+                const outcome = entry.status === "ok" ? "Success" : "Error";
+
+                let detailMessage = "";
+                if (entry.status === "ok") {
+                    if (currentDocType === "information") {
+                        const conceptCount = entry.payload?.concepts?.length || 0;
+                        const cardCount = entry.payload?.concepts?.reduce((sum, c) => sum + (c.cards?.length || 0), 0) || 0;
+                        detailMessage = `Processed successfully. Generated ${cardCount} flashcard${cardCount === 1 ? "" : "s"} across ${conceptCount} concept${conceptCount === 1 ? "" : "s"}.`;
+                    } else if (currentDocType === "exam") {
+                        const topicCount = entry.payload?.topics?.length || 0;
+                        detailMessage = `Processed successfully. Extracted ${topicCount} topic${topicCount === 1 ? "" : "s"}.`;
+                    } else {
+                        detailMessage = "Processed successfully.";
+                    }
+                } else {
+                    detailMessage = entry.message || "Unexpected issue occurred during processing.";
+                }
+
+                article.innerHTML = `
+                    <div>
+                        <div class="btn-bar">
+                            <strong>${entry.name}</strong>
+                            <span class="badge">${outcome}</span>
+                        </div>
+                        <p>Document ID: ${entry.documentId || "—"} · Pages: ${entry.pages || "—"}</p>
+                        <p>${detailMessage}</p>
+                        ${entry.payload ? `<details><summary>View Details</summary><pre>${JSON.stringify(entry.payload, null, 2)}</pre></details>` : ""}
+                    </div>
+                `;
+                resultsBody.appendChild(article);
+            });
+        }
+
+        function showStatus(message, isError) {
+            statusBox.classList.remove("hidden");
+            statusBox.textContent = message;
+            statusBox.classList.toggle("error", Boolean(isError));
+        }
+    </script>
+</body>
+
+</html>
