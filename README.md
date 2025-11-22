@@ -1,73 +1,68 @@
-# React + TypeScript + Vite
+# FlashAI
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+FlashAI is a modern, intelligent flashcard application built with React, TypeScript, and Vite. It leverages the `ts-fsrs` spaced repetition library to optimize learning and retention.
 
-Currently, two official plugins are available:
+![App Screenshot](public/app-screenshot.png)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Features
 
-## React Compiler
+-   **Smart Sprints**: Review flashcards in focused sprints (default 10 cards) to maintain engagement.
+-   **Spaced Repetition**: Utilizes the [FSRS](https://github.com/open-spaced-repetition/ts-fsrs) algorithm to schedule reviews efficiently.
+-   **Topic-Based Learning**: Organize study sessions by topics such as Processes, Memory, Concurrency, and Storage.
+-   **Instant Feedback**: Visual feedback on card flips and answers.
+-   **Progress Tracking**: Overview page ranking topics by performance and highlighting difficult questions.
+-   **Gamification**: Celebratory confetti effects upon sprint completion!
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Tech Stack
 
-## Expanding the ESLint configuration
+-   **Framework**: [React](https://react.dev/) + [Vite](https://vitejs.dev/)
+-   **Language**: [TypeScript](https://www.typescriptlang.org/)
+-   **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+-   **Algorithm**: [ts-fsrs](https://github.com/open-spaced-repetition/ts-fsrs)
+-   **Icons**: [Lucide React](https://lucide.dev/)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Getting Started
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### Prerequisites
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+-   Node.js (v18 or higher)
+-   pnpm (recommended) or npm/yarn
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Installation
+
+1.  Clone the repository:
+    ```bash
+    git clone <repository-url>
+    cd flash-ai
+    ```
+
+2.  Install dependencies:
+    ```bash
+    pnpm install
+    # or
+    npm install
+    ```
+
+### Running Locally
+
+Start the development server:
+
+```bash
+pnpm run dev
+# or
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+The application will be available at `http://localhost:5173/`.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Building for Production
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+To build the application for production:
+
+```bash
+pnpm run build
 ```
+
+## License
+
+MIT
